@@ -3,13 +3,17 @@ Pydantic models for data validation and serialization.
 Defines schemas for client data, predictions, and API responses.
 """
 
-# Standard library imports
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List
+# Standard and third party imports
 from enum import IntEnum
+from typing import Optional, List
+from pydantic import BaseModel, Field
 
 # Enums for validation
 class Gender(IntEnum):
+    """
+    Enum to represent gender with values:
+    1 = Male, 2 = Female
+    """
     MALE = 1
     FEMALE = 2
 
@@ -44,6 +48,10 @@ class PredictionInput(BaseModel):
     need_mental_health_support_bool: str
 
 class ClientBase(BaseModel):
+    """
+    Base schema for client data that includes various attributes like age, gender, work experience, etc.
+    This schema is used as a base class for other client-related schemas.
+    """
     age: int = Field(ge=18, description="Age of client, must be 18 or older")
     gender: Gender = Field(description="Gender: 1 for male, 2 for female")
     work_experience: int = Field(ge=0, description="Years of work experience")
@@ -100,12 +108,20 @@ class ClientBase(BaseModel):
         }
 
 class ClientResponse(ClientBase):
+    """
+    Client response schema that includes an `id` field.
+    Inherits from `ClientBase` and adds an `id` field to uniquely identify a client.
+    """
     id: int
 
     class Config:
-        from_attributes = True
+        from_attributes = True  # Make sure this is relevant and necessary
 
 class ClientUpdate(BaseModel):
+    """
+    Schema for client update request, allowing partial updates of client data.
+    Fields are optional to allow for flexible updates.
+    """
     age: Optional[int] = Field(None, ge=18)
     gender: Optional[Gender] = None
     work_experience: Optional[int] = Field(None, ge=0)
@@ -132,6 +148,10 @@ class ClientUpdate(BaseModel):
     need_mental_health_support_bool: Optional[bool] = None
 
 class ServiceResponse(BaseModel):
+    """
+    Schema for service response, which indicates the services a client is eligible for.
+    Includes boolean flags for various services and a success rate.
+    """
     employment_assistance: bool
     life_stabilization: bool
     retention_services: bool
@@ -145,6 +165,9 @@ class ServiceResponse(BaseModel):
         from_attributes = True
 
 class ServiceUpdate(BaseModel):
+    """
+    Schema for updating services, allowing partial updates to service attributes.
+    """
     employment_assistance: Optional[bool] = None
     life_stabilization: Optional[bool] = None
     retention_services: Optional[bool] = None
@@ -155,6 +178,9 @@ class ServiceUpdate(BaseModel):
     success_rate: Optional[int] = Field(None, ge=0, le=100)
 
 class ClientListResponse(BaseModel):
+    """
+    Schema for the response containing a list of clients.
+    Includes the total number of clients and the list itself.
+    """
     clients: List[ClientResponse]
     total: int
-    
