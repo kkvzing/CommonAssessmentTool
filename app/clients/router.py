@@ -3,19 +3,48 @@ Router module for client-related endpoints.
 Handles all HTTP requests for client operations including create, read, update, and delete.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
 from typing import List, Optional
+from fastapi import APIRouter, Depends, status, Query
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.clients.service.client_service import ClientService
 from app.clients.schema import (
-    ClientResponse, 
-    ClientUpdate, 
+    ClientResponse,
+    ClientUpdate,
     ClientListResponse,
     ServiceResponse,
     ServiceUpdate
 )
+
+# Pydantic model to handle query parameters
+from pydantic import BaseModel
+
+class ClientSearchCriteria(BaseModel):
+    employment_status: Optional[bool] = None
+    education_level: Optional[int] = None
+    age_min: Optional[int] = None
+    gender: Optional[int] = None
+    work_experience: Optional[int] = None
+    canada_workex: Optional[int] = None
+    dep_num: Optional[int] = None
+    canada_born: Optional[bool] = None
+    citizen_status: Optional[bool] = None
+    fluent_english: Optional[bool] = None
+    reading_english_scale: Optional[int] = None
+    speaking_english_scale: Optional[int] = None
+    writing_english_scale: Optional[int] = None
+    numeracy_scale: Optional[int] = None
+    computer_scale: Optional[int] = None
+    transportation_bool: Optional[bool] = None
+    caregiver_bool: Optional[bool] = None
+    housing: Optional[int] = None
+    income_source: Optional[int] = None
+    felony_bool: Optional[bool] = None
+    attending_school: Optional[bool] = None
+    substance_use: Optional[bool] = None
+    time_unemployed: Optional[int] = None
+    need_mental_health_support_bool: Optional[bool] = None
 
 router = APIRouter(prefix="/clients", tags=["clients"])
 
@@ -38,59 +67,13 @@ async def get_client(
 
 @router.get("/search/by-criteria", response_model=List[ClientResponse])
 async def get_clients_by_criteria(
-    employment_status: Optional[bool] = None,
-    education_level: Optional[int] = Query(None, ge=1, le=14),
-    age_min: Optional[int] = Query(None, ge=18),
-    gender: Optional[int] = Query(None, ge=1, le=2),
-    work_experience: Optional[int] = Query(None, ge=0),
-    canada_workex: Optional[int] = Query(None, ge=0),
-    dep_num: Optional[int] = Query(None, ge=0),
-    canada_born: Optional[bool] = None,
-    citizen_status: Optional[bool] = None,
-    fluent_english: Optional[bool] = None,
-    reading_english_scale: Optional[int] = Query(None, ge=0, le=10),
-    speaking_english_scale: Optional[int] = Query(None, ge=0, le=10),
-    writing_english_scale: Optional[int] = Query(None, ge=0, le=10),
-    numeracy_scale: Optional[int] = Query(None, ge=0, le=10),
-    computer_scale: Optional[int] = Query(None, ge=0, le=10),
-    transportation_bool: Optional[bool] = None,
-    caregiver_bool: Optional[bool] = None,
-    housing: Optional[int] = Query(None, ge=1, le=10),
-    income_source: Optional[int] = Query(None, ge=1, le=11),
-    felony_bool: Optional[bool] = None,
-    attending_school: Optional[bool] = None,
-    substance_use: Optional[bool] = None,
-    time_unemployed: Optional[int] = Query(None, ge=0),
-    need_mental_health_support_bool: Optional[bool] = None,
+    criteria: ClientSearchCriteria = Depends(),
     db: Session = Depends(get_db)
 ):
     """Search clients by any combination of criteria"""
     return ClientService.get_clients_by_criteria(
         db,
-        employment_status=employment_status,
-        education_level=education_level,
-        age_min=age_min,
-        gender=gender,
-        work_experience=work_experience,
-        canada_workex=canada_workex,
-        dep_num=dep_num,
-        canada_born=canada_born,
-        citizen_status=citizen_status,
-        fluent_english=fluent_english,
-        reading_english_scale=reading_english_scale,
-        speaking_english_scale=speaking_english_scale,
-        writing_english_scale=writing_english_scale,
-        numeracy_scale=numeracy_scale,
-        computer_scale=computer_scale,
-        transportation_bool=transportation_bool,
-        caregiver_bool=caregiver_bool,
-        housing=housing,
-        income_source=income_source,
-        felony_bool=felony_bool,
-        attending_school=attending_school,
-        substance_use=substance_use,
-        time_unemployed=time_unemployed,
-        need_mental_health_support_bool=need_mental_health_support_bool
+        **criteria.dict(exclude_unset=True)  # Pass non-null fields
     )
 
 @router.get("/search/by-services", response_model=List[ClientResponse])
