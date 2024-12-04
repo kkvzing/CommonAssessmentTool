@@ -3,7 +3,7 @@ Module for initializing the database with default users and client data from a C
 It creates an admin user, a case worker, and populates the database with client information
 and associated case data from a CSV file.
 """
-
+# pylint: disable=C0301, C0305, W0718, E1101
 import pandas as pd
 from app.database import SessionLocal
 from app.models import Client, User, ClientCase, UserRole
