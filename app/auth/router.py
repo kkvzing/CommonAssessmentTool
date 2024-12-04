@@ -13,6 +13,9 @@ from pydantic import BaseModel, Field, validator
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 class UserCreate(BaseModel):
+    """
+    Pydantic model to validate data for user creation.
+    """
     username: str = Field(..., min_length=3, max_length=50)
     email: str
     password: str
@@ -20,11 +23,17 @@ class UserCreate(BaseModel):
 
     @validator('role')
     def validate_role(cls, v):
+        """
+        Validator to ensure the role is either 'admin' or 'case_worker'.
+        """
         if v not in [UserRole.admin, UserRole.case_worker]:
             raise ValueError('Role must be either admin or case_worker')
         return v
 
 class UserResponse(BaseModel):
+    """
+    Pydantic model for returning user data.
+    """
     username: str
     email: str
     role: UserRole
@@ -41,18 +50,31 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verifies if the plain password matches the hashed password.
+    """
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
+    """
+    Returns the hashed version of the password.
+    """
     return pwd_context.hash(password)
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
+    """
+    Authenticates a user by checking the username and password in the database.
+    Returns the user if authenticated, otherwise None.
+    """
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """
+    Creates a JWT access token with the specified expiration time.
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -66,6 +88,10 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
+    """
+    Decodes the JWT token and retrieves the user from the database.
+    Raises HTTPException if the token is invalid or the user doesn't exist.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -76,8 +102,8 @@ async def get_current_user(
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        raise credentials_exception from exc
 
     user = db.query(User).filter(User.username == username).first()
     if user is None:
@@ -85,6 +111,9 @@ async def get_current_user(
     return user
 
 def get_admin_user(current_user: User = Depends(get_current_user)):
+    """
+    Ensures the current user has an 'admin' role. Raises a 403 HTTPException if not.
+    """
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -97,6 +126,9 @@ async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+    """
+    Logs in a user and returns an access token.
+    """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -116,7 +148,9 @@ async def create_user(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new user (admin only)"""
+    """
+    Creates a new user (admin only). Validates the uniqueness of the username and email before creating the user.
+    """
     # Check if username exists
     if db.query(User).filter(User.username == user_data.username).first():
         raise HTTPException(
@@ -149,4 +183,4 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
-        )
+        ) from e
