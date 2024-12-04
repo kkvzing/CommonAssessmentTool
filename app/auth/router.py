@@ -1,17 +1,47 @@
+# pylint: disable=missing-module-docstring, pointless-string-statement, no-self-argument, too-few-public-methods, missing-final-newline
 from datetime import datetime, timedelta
 from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import User, UserRole
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field, validator
 
+from app.database import get_db
+from app.models import User, UserRole
+
+# Module Docstring
+"""
+This module provides authentication functionalities, including user login, token generation,
+and user creation, along with user role validation. It also includes utility functions for
+password management and access control.
+"""
+
+# Router Configuration
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
+# Configuration Constants
+SECRET_KEY = "your-secret-key-here"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
 class UserCreate(BaseModel):
+    """
+    Pydantic model for creating a new user.
+
+    Attributes:
+    - username (str): The username of the user.
+    - email (str): The email address of the user.
+    - password (str): The password of the user.
+    - role (UserRole): The role of the user (either admin or case_worker).
+    """
+
     username: str = Field(..., min_length=3, max_length=50)
     email: str
     password: str
@@ -19,11 +49,32 @@ class UserCreate(BaseModel):
 
     @validator('role')
     def validate_role(cls, v):
+        """
+        Validates that the role is either admin or case_worker.
+
+        Args:
+        - v: The role value to be validated.
+
+        Returns:
+        - str: The validated role value.
+
+        Raises:
+        - ValueError: If the role is neither admin nor case_worker.
+        """
         if v not in [UserRole.admin, UserRole.case_worker]:
             raise ValueError('Role must be either admin or case_worker')
         return v
 
 class UserResponse(BaseModel):
+    """
+    Pydantic model for user response, used to send user information back in API responses.
+
+    Attributes:
+    - username (str): The username of the user.
+    - email (str): The email address of the user.
+    - role (UserRole): The role of the user (admin or case_worker).
+    """
+
     username: str
     email: str
     role: UserRole
@@ -31,27 +82,60 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Configuration
-SECRET_KEY = "your-secret-key-here"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
-
+# Helper Functions
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verifies if the plain password matches the hashed password.
+
+    Args:
+    - plain_password (str): The password input by the user.
+    - hashed_password (str): The stored hashed password.
+
+    Returns:
+    - bool: True if the password matches, False otherwise.
+    """
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
+    """
+    Generates a hashed password.
+
+    Args:
+    - password (str): The plain password.
+
+    Returns:
+    - str: The hashed password.
+    """
     return pwd_context.hash(password)
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
+    """
+    Authenticates the user by verifying the username and password.
+
+    Args:
+    - db (Session): The database session.
+    - username (str): The username of the user.
+    - password (str): The plain password.
+
+    Returns:
+    - User: The authenticated user if valid, None otherwise.
+    """
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """
+    Creates an access token for the user.
+
+    Args:
+    - data (dict): The data to encode in the JWT token.
+    - expires_delta (Optional[timedelta]): The expiration time for the token.
+
+    Returns:
+    - str: The encoded JWT access token.
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -65,6 +149,19 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
+    """
+    Retrieves the current user based on the access token.
+
+    Args:
+    - token (str): The JWT token.
+    - db (Session): The database session.
+
+    Returns:
+    - User: The user corresponding to the token's username.
+
+    Raises:
+    - HTTPException: If credentials are invalid.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -75,15 +172,27 @@ async def get_current_user(
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
+    except JWTError as exc:
+        raise credentials_exception from exc
+
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception
     return user
 
 def get_admin_user(current_user: User = Depends(get_current_user)):
+    """
+    Ensures that the current user is an admin.
+
+    Args:
+    - current_user (User): The current authenticated user.
+
+    Returns:
+    - User: The current admin user.
+
+    Raises:
+    - HTTPException: If the user is not an admin.
+    """
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -91,11 +200,24 @@ def get_admin_user(current_user: User = Depends(get_current_user)):
         )
     return current_user
 
+# Routes
 @router.post("/token")
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+    """
+    Logs the user in and generates an access token.
+
+    Args:
+    - form_data (OAuth2PasswordRequestForm): The username and password provided by the user.
+
+    Returns:
+    - dict: Contains the access token and its type.
+    
+    Raises:
+    - HTTPException: If the username or password is incorrect.
+    """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -115,7 +237,20 @@ async def create_user(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new user (admin only)"""
+    """
+    Creates a new user (admin only).
+
+    Args:
+    - user_data (UserCreate): The data for the new user.
+    - current_user (User): The currently authenticated admin user.
+    - db (Session): The database session.
+
+    Returns:
+    - UserResponse: The newly created user.
+
+    Raises:
+    - HTTPException: If the username or email already exists, or if the current user is not an admin.
+    """
     # Check if username exists
     if db.query(User).filter(User.username == user_data.username).first():
         raise HTTPException(
@@ -148,4 +283,4 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
-        )
+        ) from e
