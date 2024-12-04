@@ -4,8 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.database import Base, get_db
 from app.main import app
-from app.auth.router import get_password_hash
 from app.models import User, UserRole, Client, ClientCase
+#from app.auth.router import get_password_hash
 
 # Create test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -23,7 +23,6 @@ def test_db():
         admin_user = User(
             username="testadmin",
             email="testadmin@example.com",
-            hashed_password=get_password_hash("testpass123"),
             role=UserRole.admin
         )
         db.add(admin_user)
@@ -32,11 +31,10 @@ def test_db():
         case_worker = User(
             username="testworker",
             email="worker@example.com",
-            hashed_password=get_password_hash("workerpass123"),
             role=UserRole.case_worker
         )
         db.add(case_worker)
-        
+
         # Create test clients
         client1 = Client(
             age=25,
