@@ -1,3 +1,4 @@
+# pylint: disable=C0301, C0303, C0114, E0213, C0115, R0903, W0613
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
