@@ -38,17 +38,24 @@ class Client(Base):
     dep_num = Column(Integer, CheckConstraint('dep_num >= 0'))
     canada_born = Column(Boolean)
     citizen_status = Column(Boolean)
-    level_of_schooling = Column(Integer, CheckConstraint('level_of_schooling >= 1 AND level_of_schooling <= 14'))
+    level_of_schooling = Column(Integer, CheckConstraint(
+        'level_of_schooling >= 1 AND level_of_schooling <= 14'))
     fluent_english = Column(Boolean)
-    reading_english_scale = Column(Integer, CheckConstraint('reading_english_scale >= 0 AND reading_english_scale <= 10'))
-    speaking_english_scale = Column(Integer, CheckConstraint('speaking_english_scale >= 0 AND speaking_english_scale <= 10'))
-    writing_english_scale = Column(Integer, CheckConstraint('writing_english_scale >= 0 AND writing_english_scale <= 10'))
-    numeracy_scale = Column(Integer, CheckConstraint('numeracy_scale >= 0 AND numeracy_scale <= 10'))
-    computer_scale = Column(Integer, CheckConstraint('computer_scale >= 0 AND computer_scale <= 10'))
+    reading_english_scale = Column(Integer, CheckConstraint(
+        'reading_english_scale >= 0 AND reading_english_scale <= 10'))
+    speaking_english_scale = Column(Integer, CheckConstraint(
+        'speaking_english_scale >= 0 AND speaking_english_scale <= 10'))
+    writing_english_scale = Column(Integer, CheckConstraint(
+        'writing_english_scale >= 0 AND writing_english_scale <= 10'))
+    numeracy_scale = Column(Integer, CheckConstraint(
+        'numeracy_scale >= 0 AND numeracy_scale <= 10'))
+    computer_scale = Column(Integer, CheckConstraint(
+        'computer_scale >= 0 AND computer_scale <= 10'))
     transportation_bool = Column(Boolean)
     caregiver_bool = Column(Boolean)
     housing = Column(Integer, CheckConstraint('housing >= 1 AND housing <= 10'))
-    income_source = Column(Integer, CheckConstraint('income_source >= 1 AND income_source <= 11'))
+    income_source = Column(Integer, CheckConstraint(
+        'income_source >= 1 AND income_source <= 11'))
     felony_bool = Column(Boolean)
     attending_school = Column(Boolean)
     currently_employed = Column(Boolean)
@@ -71,7 +78,8 @@ class ClientCase(Base):
     employment_related_financial_supports = Column(Boolean)
     employer_financial_supports = Column(Boolean)
     enhanced_referrals = Column(Boolean)
-    success_rate = Column(Integer, CheckConstraint('success_rate >= 0 AND success_rate <= 100'))
+    success_rate = Column(Integer, CheckConstraint(
+        'success_rate >= 0 AND success_rate <= 100'))
 
     client = relationship("Client", back_populates="cases")
     user = relationship("User", back_populates="cases")
