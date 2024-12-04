@@ -1,3 +1,4 @@
+# pylint: disable=C0114, W0105, E0213, R0903, C0304
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,20 +10,9 @@ from app.models import User, UserRole
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field, validator
 
-# Module-level docstring
-"""
-This module handles authentication-related functionality, including user login,
-creating new users, generating JWT tokens, and user role validation.
-"""
-
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-
 class UserCreate(BaseModel):
-    """
-    Pydantic model for creating a new user. Validates required fields like username, email,
-    password, and user role.
-    """
     username: str = Field(..., min_length=3, max_length=50)
     email: str
     password: str
@@ -30,26 +20,17 @@ class UserCreate(BaseModel):
 
     @validator('role')
     def validate_role(cls, v):
-        """
-        Validates the user role. Ensures it is either 'admin' or 'case_worker'.
-        """
         if v not in [UserRole.admin, UserRole.case_worker]:
             raise ValueError('Role must be either admin or case_worker')
         return v
 
-
 class UserResponse(BaseModel):
-    """
-    Pydantic model to respond with user information.
-    This is used to return the user details after creation or during login.
-    """
     username: str
     email: str
     role: UserRole
 
     class Config:
         from_attributes = True
-
 
 # Configuration
 SECRET_KEY = "your-secret-key-here"
@@ -59,36 +40,19 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
-
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verifies if the provided password matches the hashed password.
-    """
     return pwd_context.verify(plain_password, hashed_password)
 
-
 def get_password_hash(password: str) -> str:
-    """
-    Hashes the provided password.
-    """
     return pwd_context.hash(password)
 
-
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    """
-    Authenticates the user based on the provided username and password.
-    Returns the user object if authenticated, else returns None.
-    """
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
 
-
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """
-    Generates a JWT access token with the provided data and expiration time.
-    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -98,14 +62,10 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-
 async def get_current_user(
-        token: str = Depends(oauth2_scheme),
-        db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
 ) -> User:
-    """
-    Retrieves the current user based on the provided JWT token.
-    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -116,19 +76,15 @@ async def get_current_user(
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-    except JWTError as exc:
-        raise credentials_exception from exc
+    except JWTError:
+        raise credentials_exception
 
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception
     return user
 
-
 def get_admin_user(current_user: User = Depends(get_current_user)):
-    """
-    Dependency to check if the current user has the admin role.
-    """
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -136,15 +92,11 @@ def get_admin_user(current_user: User = Depends(get_current_user)):
         )
     return current_user
 
-
 @router.post("/token")
 async def login_for_access_token(
-        form_data: OAuth2PasswordRequestForm = Depends(),
-        db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
 ):
-    """
-    Logs in a user and returns an access token.
-    """
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -158,16 +110,13 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-
 @router.post("/users", response_model=UserResponse)
 async def create_user(
-        user_data: UserCreate,
-        current_user: User = Depends(get_admin_user),
-        db: Session = Depends(get_db)
+    user_data: UserCreate,
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
 ):
-    """
-    Creates a new user (admin only).
-    """
+    """Create a new user (admin only)"""
     # Check if username exists
     if db.query(User).filter(User.username == user_data.username).first():
         raise HTTPException(
@@ -200,4 +149,4 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
-        ) from e
+        )

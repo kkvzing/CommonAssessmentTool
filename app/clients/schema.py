@@ -2,7 +2,7 @@
 Pydantic models for data validation and serialization.
 Defines schemas for client data, predictions, and API responses.
 """
-
+# pylint: disable=C0114, W0105, E0213, R0903, C0304
 # Standard library imports
 from pydantic import BaseModel, Field
 from typing import Optional, List
