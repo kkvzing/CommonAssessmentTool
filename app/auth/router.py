@@ -1,3 +1,4 @@
+# pylint: disable=missing-module-docstring, pointless-string-statement, no-self-argument, too-few-public-methods, missing-final-newline
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
