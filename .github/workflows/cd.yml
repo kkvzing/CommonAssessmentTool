@@ -27,8 +27,12 @@ jobs:
         run: |
           python -m pytest tests/
 
+      - name: Run Pylint
+        run: |
+          pylint --rcfile=.pylintrc $(git ls-files '*.py')
+
   deploy:
-    needs: test # This ensures deploy only runs if tests pass
+    needs: test  # This ensures deploy only runs if tests pass
     runs-on: ubuntu-latest
 
     steps:
