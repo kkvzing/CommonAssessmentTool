@@ -39,7 +39,7 @@ class Auth:
         role: UserRole
 
         @validator('role')
-        def validate_role(self, v):
+        def validate_role(cls, v):
             """
             Validates that the user's role is either 'admin' or 'case_worker'.
             """
