@@ -2,18 +2,19 @@
 Database models module defining SQLAlchemy ORM models for the Common Assessment Tool.
 Contains the Client model for storing client information in the database.
 """
-
-from app.database import Base
+import enum
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, CheckConstraint, Enum
 from sqlalchemy.orm import relationship
-import enum
+from app.database import Base
 
+# pylint: disable=C0103, R0903, C0301, C0303, C0114
 class UserRole(str, enum.Enum):
+    """ Class for UserRole"""
     admin = "admin"
     case_worker = "case_worker"
 
-
 class User(Base):
+    """ Class for User"""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -23,7 +24,7 @@ class User(Base):
     role = Column(Enum(UserRole), nullable=False)
 
     cases = relationship("ClientCase", back_populates="user")
-
+    
 class Client(Base):
     """
     Client model representing client data in the database.
@@ -62,15 +63,14 @@ class Client(Base):
     substance_use = Column(Boolean)
     time_unemployed = Column(Integer, CheckConstraint('time_unemployed >= 0'))
     need_mental_health_support_bool = Column(Boolean)
-
     cases = relationship("ClientCase", back_populates="client")
-
+    
 class ClientCase(Base):
+    """ Class for ClientBase"""
     __tablename__ = "client_cases"
 
     client_id = Column(Integer, ForeignKey("clients.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
-    
     employment_assistance = Column(Boolean)
     life_stabilization = Column(Boolean)
     retention_services = Column(Boolean)
