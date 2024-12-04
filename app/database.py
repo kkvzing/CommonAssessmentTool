@@ -8,7 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 #Here is where the database is located
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"  
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
 
 #Open up a connection so that we are able to use the database
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
