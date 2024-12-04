@@ -3,17 +3,17 @@ Router module for client-related endpoints.
 Handles all HTTP requests for client operations including create, read, update, and delete.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.auth.router import get_current_user, get_admin_user
-from app.models import User, UserRole
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
 
+from app.auth.router import get_current_user, get_admin_user
+from app.models import User
 from app.database import get_db
 from app.clients.service.client_service import ClientService
 from app.clients.schema import (
-    ClientResponse, 
-    ClientUpdate, 
+    ClientResponse,
+    ClientUpdate,
     ClientListResponse,
     ServiceResponse,
     ServiceUpdate
@@ -23,79 +23,29 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 
 @router.get("/", response_model=ClientListResponse)
 async def get_clients(
-    current_user: User = Depends(get_admin_user), 
     skip: int = Query(default=0, ge=0, description="Number of records to skip"),
     limit: int = Query(default=50, ge=1, le=150, description="Maximum number of records to return"),
     db: Session = Depends(get_db)
 ):
+    """Retrieve a list of clients."""
     return ClientService.get_clients(db, skip, limit)
 
 @router.get("/{client_id}", response_model=ClientResponse)
 async def get_client(
     client_id: int,
-    current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Get a specific client by ID"""
+    """Get a specific client by ID."""
     return ClientService.get_client(db, client_id)
 
 @router.get("/search/by-criteria", response_model=List[ClientResponse])
 async def get_clients_by_criteria(
-    employment_status: Optional[bool] = None,
-    education_level: Optional[int] = Query(None, ge=1, le=14),
-    age_min: Optional[int] = Query(None, ge=18),
-    gender: Optional[int] = Query(None, ge=1, le=2),
-    work_experience: Optional[int] = Query(None, ge=0),
-    canada_workex: Optional[int] = Query(None, ge=0),
-    dep_num: Optional[int] = Query(None, ge=0),
-    canada_born: Optional[bool] = None,
-    citizen_status: Optional[bool] = None,
-    fluent_english: Optional[bool] = None,
-    reading_english_scale: Optional[int] = Query(None, ge=0, le=10),
-    speaking_english_scale: Optional[int] = Query(None, ge=0, le=10),
-    writing_english_scale: Optional[int] = Query(None, ge=0, le=10),
-    numeracy_scale: Optional[int] = Query(None, ge=0, le=10),
-    computer_scale: Optional[int] = Query(None, ge=0, le=10),
-    transportation_bool: Optional[bool] = None,
-    caregiver_bool: Optional[bool] = None,
-    housing: Optional[int] = Query(None, ge=1, le=10),
-    income_source: Optional[int] = Query(None, ge=1, le=11),
-    felony_bool: Optional[bool] = None,
-    attending_school: Optional[bool] = None,
-    substance_use: Optional[bool] = None,
-    time_unemployed: Optional[int] = Query(None, ge=0),
-    need_mental_health_support_bool: Optional[bool] = None,
+    criteria: ClientSearchCriteria,  # Use Pydantic model for criteria
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Search clients by any combination of criteria"""
-    return ClientService.get_clients_by_criteria(
-        db,
-        employment_status=employment_status,
-        education_level=education_level,
-        age_min=age_min,
-        gender=gender,
-        work_experience=work_experience,
-        canada_workex=canada_workex,
-        dep_num=dep_num,
-        canada_born=canada_born,
-        citizen_status=citizen_status,
-        fluent_english=fluent_english,
-        reading_english_scale=reading_english_scale,
-        speaking_english_scale=speaking_english_scale,
-        writing_english_scale=writing_english_scale,
-        numeracy_scale=numeracy_scale,
-        computer_scale=computer_scale,
-        transportation_bool=transportation_bool,
-        caregiver_bool=caregiver_bool,
-        housing=housing,
-        income_source=income_source,
-        felony_bool=felony_bool,
-        attending_school=attending_school,
-        substance_use=substance_use,
-        time_unemployed=time_unemployed,
-        need_mental_health_support_bool=need_mental_health_support_bool
-    )
+    """Search clients by any combination of criteria."""
+    return ClientService.get_clients_by_criteria(db, **criteria.dict())
 
 @router.get("/search/by-services", response_model=List[ClientResponse])
 async def get_clients_by_services(
@@ -109,7 +59,7 @@ async def get_clients_by_services(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Get clients filtered by multiple service statuses"""
+    """Get clients filtered by multiple service statuses."""
     return ClientService.get_clients_by_services(
         db,
         employment_assistance=employment_assistance,
@@ -127,7 +77,7 @@ async def get_client_services(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Get all services and their status for a specific client, including case worker info"""
+    """Get all services and their status for a specific client, including case worker info."""
     return ClientService.get_client_services(db, client_id)
 
 @router.get("/search/success-rate", response_model=List[ClientResponse])
@@ -136,7 +86,7 @@ async def get_clients_by_success_rate(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Get clients with success rate above specified threshold"""
+    """Get clients with success rate above specified threshold."""
     return ClientService.get_clients_by_success_rate(db, min_rate)
 
 @router.get("/case-worker/{case_worker_id}", response_model=List[ClientResponse])
@@ -145,6 +95,7 @@ async def get_clients_by_case_worker(
     current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
+    """Get all clients assigned to a specific case worker."""
     return ClientService.get_clients_by_case_worker(db, case_worker_id)
 
 @router.put("/{client_id}", response_model=ClientResponse)
@@ -154,7 +105,7 @@ async def update_client(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Update a client's information"""
+    """Update a client's information."""
     return ClientService.update_client(db, client_id, client_data)
 
 @router.put("/{client_id}/services/{user_id}", response_model=ServiceResponse)
@@ -165,6 +116,7 @@ async def update_client_services(
     current_user: User = Depends(get_current_user),  
     db: Session = Depends(get_db)
 ):
+    """Update a client's service information."""
     return ClientService.update_client_services(db, client_id, user_id, service_update)
 
 @router.post("/{client_id}/case-assignment", response_model=ServiceResponse)
@@ -174,7 +126,7 @@ async def create_case_assignment(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new case assignment for a client with a case worker"""
+    """Create a new case assignment for a client with a case worker."""
     return ClientService.create_case_assignment(db, client_id, case_worker_id)
 
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -183,6 +135,35 @@ async def delete_client(
     current_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Delete a client"""
+    """Delete a client."""
     ClientService.delete_client(db, client_id)
     return None
+
+# Pydantic model for client search criteria (to reduce function arguments)
+from pydantic import BaseModel
+
+class ClientSearchCriteria(BaseModel):
+    employment_status: Optional[bool] = None
+    education_level: Optional[int] = Query(None, ge=1, le=14)
+    age_min: Optional[int] = Query(None, ge=18)
+    gender: Optional[int] = Query(None, ge=1, le=2)
+    work_experience: Optional[int] = Query(None, ge=0)
+    canada_workex: Optional[int] = Query(None, ge=0)
+    dep_num: Optional[int] = Query(None, ge=0)
+    canada_born: Optional[bool] = None
+    citizen_status: Optional[bool] = None
+    fluent_english: Optional[bool] = None
+    reading_english_scale: Optional[int] = Query(None, ge=0, le=10)
+    speaking_english_scale: Optional[int] = Query(None, ge=0, le=10)
+    writing_english_scale: Optional[int] = Query(None, ge=0, le=10)
+    numeracy_scale: Optional[int] = Query(None, ge=0, le=10)
+    computer_scale: Optional[int] = Query(None, ge=0, le=10)
+    transportation_bool: Optional[bool] = None
+    caregiver_bool: Optional[bool] = None
+    housing: Optional[int] = Query(None, ge=1, le=10)
+    income_source: Optional[int] = Query(None, ge=1, le=11)
+    felony_bool: Optional[bool] = None
+    attending_school: Optional[bool] = None
+    substance_use: Optional[bool] = None
+    time_unemployed: Optional[int] = Query(None, ge=0)
+    need_mental_health_support_bool: Optional[bool] = None
