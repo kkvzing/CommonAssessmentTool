@@ -21,7 +21,7 @@ from app.auth.router import router as auth_router
 models.Base.metadata.create_all(bind=engine)
 
 # Create FastAPI application
-app = FastAPI(title="Case Management API", 
+app = FastAPI(title="Case Management API",
               description="API for managing client cases", version="1.0.0")
 
 # Include routers
